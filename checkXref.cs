@@ -11,17 +11,13 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 
-
 using Autodesk.AutoCAD.DatabaseServices;
 using System.Runtime.InteropServices;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Geometry;
 
-
-
-
-[assembly: SecuredApplication(
-@"license")]
+//[assembly: SecuredApplication(
+//@"license")]
 
 namespace GetFrameOfRealDwg
 {
@@ -32,7 +28,6 @@ namespace GetFrameOfRealDwg
                                                  Autodesk.AutoCAD.DatabaseServices.FindFileHint hint
                                                  )
         {
-
             return string.Empty;
         }
         static public ArrayList GetBlockNames(Database db)
@@ -45,7 +40,9 @@ namespace GetFrameOfRealDwg
                 foreach (ObjectId recordid in bt)
                 {
                     BlockTableRecord record = (BlockTableRecord)tran.GetObject(recordid, OpenMode.ForRead);
-                    array.Add(record.Name);
+                    if (record.IsFromExternalReference) {
+                        array.Add("\t" + record.Name + "\t" + record.PathName);
+                    }
                 }
             }
             catch
@@ -53,28 +50,33 @@ namespace GetFrameOfRealDwg
             }
             finally
             {
-                tran.Dispose();
             }
             return array;
         }
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
-
-
             MyHostApplicationServices myserver = new MyHostApplicationServices();
             int lcid = 0x00001033; // English
+            int num = 0;
             RuntimeSystem.Initialize(myserver, lcid);
-            Database Db = new Database(false, true);
-            Db.ReadDwgFile(@"filepath", FileShare.Read, false, "");
-            ArrayList ar = GetBlockNames(Db);
-            foreach (string str in ar)
-            {
-                System.Console.WriteLine(str);
+            for (int i = 0; i < args.Length; i++) {
+                System.Console.WriteLine(args[i]);
+                Database Db = new Database(false, true);
+                Db.ReadDwgFile(args[i], FileShare.Read, false, "");
+                ArrayList ar = GetBlockNames(Db);
+                if (ar.Count > 0) {
+                    foreach (string str in ar)
+                    {
+                        System.Console.WriteLine(str);
+                    }
+                    num++;
+                } else {
+                    System.Console.WriteLine("\t无外部参照");
+                }
+                System.Console.WriteLine("");
             }
-
             RuntimeSystem.Terminate();
-            System.Console.WriteLine();
-
+            return num;
         }
     }
 }
